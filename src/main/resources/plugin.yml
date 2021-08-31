@@ -1,0 +1,7 @@
+name: Alliances
+version: '${project.version}'
+main: me.invisibledrax.alliances.Main
+
+commands:
+  truce:
+    description: Truces

@@ -1,0 +1,303 @@
+package me.invisibledrax.alliances.truces;
+
+import me.invisibledrax.alliances.Aplayer;
+import me.invisibledrax.alliances.Main;
+import me.invisibledrax.alliances.util.SaveReloadConfig;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.UUID;
+
+public class Truce {
+
+    private static Main pl = Main.getInstance();
+    private static HashMap<String, Truce> truceNames = new HashMap<>();
+    private static HashMap<Aplayer, Truce> playerTruces = new HashMap<>();
+    public static final int MAX_MEMBERS = 5;
+    public static final String DEFAULT_DESCRIPTION = "Default :(";
+
+    private String name;
+    private File f;
+    private OfflinePlayer leader;
+    private String desc;
+    private ArrayList<UUID> members = new ArrayList<>();
+
+    private Truce(String name, OfflinePlayer leader) {
+        this.name = name;
+        this.leader = leader;
+    }
+
+    private Truce(File loadedFile) {
+        f = loadedFile;
+        YamlConfiguration config = new YamlConfiguration();
+        try {
+            config.load(loadedFile);
+        } catch (IOException | InvalidConfigurationException e) {
+            e.printStackTrace();
+        }
+        name = config.getString("Name");
+        desc = config.getString("Description");
+        ArrayList<UUID> members = new ArrayList<>();
+        for (String s: config.getConfigurationSection("Members").getKeys(false)) {
+            OfflinePlayer op = Bukkit.getOfflinePlayer(UUID.fromString(s));
+            members.add(op.getUniqueId());
+            if (config.get("Members." + s + ".Role").equals("Leader")) {
+                leader = op;
+            }
+        }
+        this.members = members;
+    }
+
+    public static Truce createTruce(String name, Player owner) {
+        Truce truce = new Truce(name, owner);
+        truceNames.put(name, truce);
+        playerTruces.put(Aplayer.getAplayer(owner), truce);
+
+        truce.getConfigFile().getParentFile().mkdirs();
+        try {
+            truce.getConfigFile().createNewFile();
+        } catch (IOException e) {
+            // Don't print stack trace
+        }
+        truce.members = new ArrayList<>();
+        truce.setName(name);
+        truce.setDescription(DEFAULT_DESCRIPTION);
+        truce.addMember(owner);
+        truce.setRole(owner, TruceRole.Leader);
+        return truce;
+    }
+
+    public void disbandTruce() {
+        truceNames.remove(name);
+        for(OfflinePlayer off : getMembers()) {
+            playerTruces.remove(Aplayer.getAplayer(off));
+        }
+        getConfigFile().delete();
+    }
+
+    public static Truce loadTruce(File f) {
+        Truce truce = new Truce(f);
+        truceNames.put(truce.getName(), truce);
+        return truce;
+    }
+
+    public static ArrayList<Truce> getAllTruces() {
+        ArrayList<Truce> ar = new ArrayList<>();
+        ar.addAll(truceNames.values());
+        return ar;
+    }
+
+    public static Truce getTruce(String name) {
+        return truceNames.get(name);
+    }
+
+    public static Truce getTruce(OfflinePlayer p) {
+        return playerTruces.get(Aplayer.getAplayer(p));
+    }
+
+    public static boolean exists(String name) {
+        if (truceNames.containsKey(name)) {
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isInTruce(OfflinePlayer player) {
+        if (playerTruces.containsKey(Aplayer.getAplayer(player))) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    public static void registerTruces() {
+        if (!getConfigPath().exists()) {
+            getConfigPath().mkdirs();
+        }
+        for (File f: getConfigPath().listFiles()) {
+            Truce truce = loadTruce(f);
+            for (OfflinePlayer op : truce.getMembers()) {
+                playerTruces.put(Aplayer.getAplayer(op), truce);
+                truceNames.put(truce.getName(), truce);
+                YamlConfiguration config = truce.getConfig();
+                config.set("Members." + op.getUniqueId() + ".Name", op.getName());
+            }
+        }
+    }
+
+    public OfflinePlayer getLeader() {
+        return leader;
+    }
+
+    public String getDescription() {
+        if (desc == null) {
+            desc = getConfig().getString("Description");
+        }
+        return desc;
+    }
+
+    public void setDescription(String desc) {
+        this.desc = desc;
+        YamlConfiguration config = getConfig();
+        config.set("Description", desc);
+        SaveReloadConfig.saveAndReload(config, getConfigFile());
+    }
+
+    public ArrayList<OfflinePlayer> getMembers() {
+        ArrayList<OfflinePlayer> members = new ArrayList<>();
+        for (UUID id : this.members) {
+            members.add(Bukkit.getOfflinePlayer(id));
+        }
+        return members;
+    }
+
+    public ArrayList<Player> getOnlineMembers() {
+        ArrayList<Player> members = new ArrayList<>();
+        for (OfflinePlayer off : getMembers()) {
+            if (off.isOnline()) {
+                members.add(Bukkit.getPlayer(off.getUniqueId()));
+            }
+        }
+        return members;
+    }
+
+    public void addMember(OfflinePlayer p) {
+        members.add(p.getUniqueId());
+        playerTruces.put(Aplayer.getAplayer(p), this);
+        YamlConfiguration config = getConfig();
+        config.set("Members." + p.getUniqueId() + ".Name", p.getName());
+        config.set("Members." + p.getUniqueId() + ".Role", TruceRole.Member.toString());
+        SaveReloadConfig.saveAndReload(config, getConfigFile());
+    }
+
+    public void setRole(OfflinePlayer p, TruceRole role) {
+        YamlConfiguration config = getConfig();
+        config.set("Members." + p.getUniqueId() + ".Role", role.toString());
+        SaveReloadConfig.saveAndReload(config, getConfigFile());
+    }
+
+    public void removeMember(OfflinePlayer p) {
+        members.remove(p.getUniqueId());
+        playerTruces.remove(Aplayer.getAplayer(p));
+        YamlConfiguration config = getConfig();
+        config.set("Members." + p.getUniqueId(), null);
+        SaveReloadConfig.saveAndReload(config, getConfigFile());
+    }
+
+    public String getName() {
+        if (name == null) {
+            name = getConfig().getString("Name");
+        }
+        return name;
+    }
+
+    public void setName(String name) {
+        truceNames.put(name, this);
+        this.name = name;
+        YamlConfiguration config = getConfig();
+        config.set("Name", name);
+        SaveReloadConfig.saveAndReload(config, getConfigFile());
+    }
+
+    public void changeName(String name) {
+        Truce truce = new Truce(name, leader);
+        truce.setName(name);
+        truce.setDescription(getDescription());
+        for (OfflinePlayer member : getMembers()) {
+            truce.addMember(member);
+            truce.setRole(member, getRole(member));
+            playerTruces.put(Aplayer.getAplayer(member), truce);
+        }
+        truceNames.remove(getName());
+        truceNames.put(name, truce);
+        getConfigFile().delete();
+        truce.getConfigFile();
+        getConfigFile().delete();
+    }
+
+    public TruceRole getRole(OfflinePlayer p) {
+        return TruceRole.fromString(getConfig().getString("Members." + p.getUniqueId() + ".Role"));
+    }
+
+    public File getConfigFile() {
+        if (f == null) {
+            return new File(getConfigPath(), name + ".yml");
+        }
+        else {
+            return f;
+        }
+    }
+
+    public YamlConfiguration getConfig() {
+        YamlConfiguration config = new YamlConfiguration();
+        try {
+            config.load(getConfigFile());
+        } catch (IOException | InvalidConfigurationException e){
+
+        }
+        return config;
+    }
+
+    public static File getConfigPath() {
+        return new File(pl.getDataFolder() + "/Truces");
+    }
+
+    public ArrayList<String> getInfoMessage() {
+        ArrayList<String> ar = new ArrayList<>();
+        ar.add(ChatColor.translateAlternateColorCodes('&', "&e&l&m---------------&r &e&l" + getName() + "&r &e&l&m----------------"));
+        ar.add("");
+        ar.add(ChatColor.translateAlternateColorCodes('&', "Description: &e" + getDescription()));
+        String members = "Members: ";
+        ArrayList<Player> online = new ArrayList<>();
+        ArrayList<OfflinePlayer> offline = new ArrayList<>();
+        for (OfflinePlayer member : getMembers()) {
+            if (member.isOnline()) {
+                online.add(Bukkit.getPlayer(member.getUniqueId()));
+            }
+            else {
+                offline.add(member);
+            }
+        }
+        String onlineString = ChatColor.GREEN + "";
+        String offlineString = ChatColor.RED + "";
+        Iterator<Player> onlineIt = online.iterator();
+        while(onlineIt.hasNext()) {
+            Player onlineP = onlineIt.next();
+            if (onlineIt.hasNext()) {
+                onlineString += getRole(onlineP).getPrefix() + onlineP.getName() + ", ";
+            }
+            else {
+                onlineString += getRole(onlineP).getPrefix() + onlineP.getName();
+            }
+        }
+        Iterator<OfflinePlayer> offlineIt = offline.iterator();
+        while(offlineIt.hasNext()) {
+            OfflinePlayer offlineP = offlineIt.next();
+            if (offlineP == offline.get(0)) {
+                offlineString += ", ";
+            }
+            if (offlineIt.hasNext()) {
+                offlineString += getRole(offlineP).getPrefix() + offlineP.getName() + ", ";
+            }
+            else {
+                offlineString += getRole(offlineP).getPrefix() + offlineP.getName();
+            }
+        }
+        members += onlineString + offlineString;
+        ar.add(members);
+        ar.add("");
+        ar.add(ChatColor.translateAlternateColorCodes('&', "&e&l&m--------------------------------------"));
+        return ar;
+    }
+
+}
