@@ -1,4 +1,4 @@
-package me.invisibledrax.alliances.util;
+package com.redblock6.mccore.utils;
 
 import me.invisibledrax.alliances.Main;
 import org.bukkit.ChatColor;

@@ -1,7 +1,19 @@
-name: Alliances
+name: Survival
 version: '${project.version}'
 main: me.invisibledrax.alliances.Main
 
 commands:
-  truce:
+  nation:
     description: Truces
+  warnreboot:
+    description: Reboot commands
+  streaming:
+    description: Streaming command
+  gmc:
+    description: Streaming command
+  gms:
+    description: Streaming command
+  gmsp:
+    description: Streaming command
+  gma:
+    description: Streaming command

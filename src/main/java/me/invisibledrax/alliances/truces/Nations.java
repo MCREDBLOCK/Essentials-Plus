@@ -1,11 +1,12 @@
 package me.invisibledrax.alliances.truces;
 
-import me.invisibledrax.alliances.Aplayer;
 import me.invisibledrax.alliances.Main;
-import me.invisibledrax.alliances.util.SaveReloadConfig;
+import com.redblock6.mccore.utils.Aplayer;
+import com.redblock6.mccore.utils.SaveReloadConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Sound;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -17,13 +18,16 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.UUID;
 
-public class Truce {
+import static me.invisibledrax.alliances.Main.getBot;
+import static me.invisibledrax.alliances.Main.translate;
+
+public class Nations {
 
     private static Main pl = Main.getInstance();
-    private static HashMap<String, Truce> truceNames = new HashMap<>();
-    private static HashMap<Aplayer, Truce> playerTruces = new HashMap<>();
-    public static final int MAX_MEMBERS = 5;
-    public static final String DEFAULT_DESCRIPTION = "Default :(";
+    private static HashMap<String, Nations> truceNames = new HashMap<>();
+    private static HashMap<Aplayer, Nations> playerTruces = new HashMap<>();
+    public static final int MAX_MEMBERS = 11;
+    public static final String DEFAULT_DESCRIPTION = "A RedSMP Nation";
 
     private String name;
     private File f;
@@ -31,12 +35,12 @@ public class Truce {
     private String desc;
     private ArrayList<UUID> members = new ArrayList<>();
 
-    private Truce(String name, OfflinePlayer leader) {
+    private Nations(String name, OfflinePlayer leader) {
         this.name = name;
         this.leader = leader;
     }
 
-    private Truce(File loadedFile) {
+    private Nations(File loadedFile) {
         f = loadedFile;
         YamlConfiguration config = new YamlConfiguration();
         try {
@@ -57,26 +61,31 @@ public class Truce {
         this.members = members;
     }
 
-    public static Truce createTruce(String name, Player owner) {
-        Truce truce = new Truce(name, owner);
-        truceNames.put(name, truce);
-        playerTruces.put(Aplayer.getAplayer(owner), truce);
+    public static Nations createTruce(String name, Player owner) {
+        Nations nations = new Nations(name, owner);
+        truceNames.put(name, nations);
+        playerTruces.put(Aplayer.getAplayer(owner), nations);
 
-        truce.getConfigFile().getParentFile().mkdirs();
+        nations.getConfigFile().getParentFile().mkdirs();
         try {
-            truce.getConfigFile().createNewFile();
+            nations.getConfigFile().createNewFile();
         } catch (IOException e) {
             // Don't print stack trace
         }
-        truce.members = new ArrayList<>();
-        truce.setName(name);
-        truce.setDescription(DEFAULT_DESCRIPTION);
-        truce.addMember(owner);
-        truce.setRole(owner, TruceRole.Leader);
-        return truce;
+        nations.members = new ArrayList<>();
+        nations.setName(name);
+        nations.setDescription(owner, DEFAULT_DESCRIPTION, false);
+        nations.addMember(owner, false);
+        nations.setRole(owner, NationRole.Leader);
+        owner.sendMessage(translate("&2&l> &fSuccessfully created &a" + name + "&f!"));
+        owner.playSound(owner.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 100, 2);
+        owner.playSound(owner.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 100, 2);
+        getBot().sendNationsAnnouncement(owner.getName(), name, NationReason.CREATED);
+        return nations;
     }
 
     public void disbandTruce() {
+        getBot().sendNationsAnnouncement(getLeader().getName(), name, NationReason.DISBANDED);
         truceNames.remove(name);
         for(OfflinePlayer off : getMembers()) {
             playerTruces.remove(Aplayer.getAplayer(off));
@@ -84,23 +93,23 @@ public class Truce {
         getConfigFile().delete();
     }
 
-    public static Truce loadTruce(File f) {
-        Truce truce = new Truce(f);
-        truceNames.put(truce.getName(), truce);
-        return truce;
+    public static Nations loadTruce(File f) {
+        Nations nations = new Nations(f);
+        truceNames.put(nations.getName(), nations);
+        return nations;
     }
 
-    public static ArrayList<Truce> getAllTruces() {
-        ArrayList<Truce> ar = new ArrayList<>();
+    public static ArrayList<Nations> getAllTruces() {
+        ArrayList<Nations> ar = new ArrayList<>();
         ar.addAll(truceNames.values());
         return ar;
     }
 
-    public static Truce getTruce(String name) {
+    public static Nations getTruce(String name) {
         return truceNames.get(name);
     }
 
-    public static Truce getTruce(OfflinePlayer p) {
+    public static Nations getTruce(OfflinePlayer p) {
         return playerTruces.get(Aplayer.getAplayer(p));
     }
 
@@ -125,11 +134,11 @@ public class Truce {
             getConfigPath().mkdirs();
         }
         for (File f: getConfigPath().listFiles()) {
-            Truce truce = loadTruce(f);
-            for (OfflinePlayer op : truce.getMembers()) {
-                playerTruces.put(Aplayer.getAplayer(op), truce);
-                truceNames.put(truce.getName(), truce);
-                YamlConfiguration config = truce.getConfig();
+            Nations nations = loadTruce(f);
+            for (OfflinePlayer op : nations.getMembers()) {
+                playerTruces.put(Aplayer.getAplayer(op), nations);
+                truceNames.put(nations.getName(), nations);
+                YamlConfiguration config = nations.getConfig();
                 config.set("Members." + op.getUniqueId() + ".Name", op.getName());
             }
         }
@@ -146,17 +155,28 @@ public class Truce {
         return desc;
     }
 
-    public void setDescription(String desc) {
+    public void setDescription(Player leader, String desc, boolean flag) {
         this.desc = desc;
         YamlConfiguration config = getConfig();
         config.set("Description", desc);
         SaveReloadConfig.saveAndReload(config, getConfigFile());
+        if (flag) {
+            getBot().sendNationsAnnouncement(leader.getName(), Nations.getTruce(leader).getName(), NationReason.CHANGED_DESC, desc);
+        }
     }
 
     public ArrayList<OfflinePlayer> getMembers() {
         ArrayList<OfflinePlayer> members = new ArrayList<>();
         for (UUID id : this.members) {
             members.add(Bukkit.getOfflinePlayer(id));
+        }
+        return members;
+    }
+
+    public ArrayList<String> getMemberNames() {
+        ArrayList<String> members = new ArrayList<>();
+        for (UUID id : this.members) {
+            members.add(Bukkit.getOfflinePlayer(id).getName());
         }
         return members;
     }
@@ -171,16 +191,19 @@ public class Truce {
         return members;
     }
 
-    public void addMember(OfflinePlayer p) {
+    public void addMember(OfflinePlayer p, boolean flag) {
         members.add(p.getUniqueId());
         playerTruces.put(Aplayer.getAplayer(p), this);
         YamlConfiguration config = getConfig();
         config.set("Members." + p.getUniqueId() + ".Name", p.getName());
-        config.set("Members." + p.getUniqueId() + ".Role", TruceRole.Member.toString());
+        config.set("Members." + p.getUniqueId() + ".Role", NationRole.Member.toString());
         SaveReloadConfig.saveAndReload(config, getConfigFile());
+        if (flag) {
+            getBot().sendNationsAnnouncement(getLeader().getName(), name, NationReason.MEMBER_ADDED, p.getName());
+        }
     }
 
-    public void setRole(OfflinePlayer p, TruceRole role) {
+    public void setRole(OfflinePlayer p, NationRole role) {
         YamlConfiguration config = getConfig();
         config.set("Members." + p.getUniqueId() + ".Role", role.toString());
         SaveReloadConfig.saveAndReload(config, getConfigFile());
@@ -192,6 +215,7 @@ public class Truce {
         YamlConfiguration config = getConfig();
         config.set("Members." + p.getUniqueId(), null);
         SaveReloadConfig.saveAndReload(config, getConfigFile());
+        getBot().sendNationsAnnouncement(getLeader().getName(), name, NationReason.MEMBER_KICKED, p.getName());
     }
 
     public String getName() {
@@ -209,24 +233,26 @@ public class Truce {
         SaveReloadConfig.saveAndReload(config, getConfigFile());
     }
 
-    public void changeName(String name) {
-        Truce truce = new Truce(name, leader);
-        truce.setName(name);
-        truce.setDescription(getDescription());
+    public void changeName(String name, String oldName) {
+        Nations nations = new Nations(name, leader);
+        getBot().sendNationsAnnouncement(leader.getName(), name, NationReason.CHANGED_NAME, oldName, name);
+        nations.setName(name);
+        nations.setDescription((Player) leader, getDescription(), false);
         for (OfflinePlayer member : getMembers()) {
-            truce.addMember(member);
-            truce.setRole(member, getRole(member));
-            playerTruces.put(Aplayer.getAplayer(member), truce);
+            nations.addMember(member, false);
+            nations.setRole(member, getRole(member));
+            playerTruces.put(Aplayer.getAplayer(member), nations);
         }
         truceNames.remove(getName());
-        truceNames.put(name, truce);
+        truceNames.put(name, nations);
         getConfigFile().delete();
-        truce.getConfigFile();
+        nations.getConfigFile();
         getConfigFile().delete();
+
     }
 
-    public TruceRole getRole(OfflinePlayer p) {
-        return TruceRole.fromString(getConfig().getString("Members." + p.getUniqueId() + ".Role"));
+    public NationRole getRole(OfflinePlayer p) {
+        return NationRole.fromString(getConfig().getString("Members." + p.getUniqueId() + ".Role"));
     }
 
     public File getConfigFile() {
@@ -254,10 +280,13 @@ public class Truce {
 
     public ArrayList<String> getInfoMessage() {
         ArrayList<String> ar = new ArrayList<>();
-        ar.add(ChatColor.translateAlternateColorCodes('&', "&e&l&m---------------&r &e&l" + getName() + "&r &e&l&m----------------"));
+        ar.add(ChatColor.translateAlternateColorCodes('&', "&4&m---------------------------------"));
+        ar.add(ChatColor.translateAlternateColorCodes('&', "&4&l" + getName().toUpperCase()));
         ar.add("");
-        ar.add(ChatColor.translateAlternateColorCodes('&', "Description: &e" + getDescription()));
-        String members = "Members: ";
+        ar.add(ChatColor.translateAlternateColorCodes('&', "&f" + getDescription()));
+        ar.add("");
+        ar.add(ChatColor.translateAlternateColorCodes('&', "&4&lMEMBERS"));
+        String members = "";
         ArrayList<Player> online = new ArrayList<>();
         ArrayList<OfflinePlayer> offline = new ArrayList<>();
         for (OfflinePlayer member : getMembers()) {
@@ -295,8 +324,7 @@ public class Truce {
         }
         members += onlineString + offlineString;
         ar.add(members);
-        ar.add("");
-        ar.add(ChatColor.translateAlternateColorCodes('&', "&e&l&m--------------------------------------"));
+        ar.add(ChatColor.translateAlternateColorCodes('&', "&4&m---------------------------------"));
         return ar;
     }
 

@@ -1,4 +1,4 @@
-package me.invisibledrax.alliances.util;
+package com.redblock6.mccore.utils;
 
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;

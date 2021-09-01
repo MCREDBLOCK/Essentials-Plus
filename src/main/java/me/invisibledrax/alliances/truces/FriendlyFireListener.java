@@ -1,10 +1,11 @@
 package me.invisibledrax.alliances.truces;
 
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+
+import static me.invisibledrax.alliances.Main.translate;
 
 public class FriendlyFireListener implements Listener {
 
@@ -13,8 +14,8 @@ public class FriendlyFireListener implements Listener {
         if ((e.getEntity() instanceof Player) && (e.getDamager() instanceof Player)) {
             Player hurt = (Player) e.getEntity();
             Player damager = (Player) e.getDamager();
-            if (Truce.getTruce(damager).equals(Truce.getTruce(hurt))) {
-                damager.sendMessage(ChatColor.RED + "(!) You cannot hurt members of your truce!");
+            if (Nations.getTruce(damager).equals(Nations.getTruce(hurt))) {
+                damager.sendMessage(translate("&4&l> &fYou can't hurt members of your nation!"));
                 e.setCancelled(true);
             }
         }
