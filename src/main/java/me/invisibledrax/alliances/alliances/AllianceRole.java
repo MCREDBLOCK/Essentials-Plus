@@ -1,12 +1,12 @@
-package me.invisibledrax.alliances.truces;
+package me.invisibledrax.alliances.alliances;
 
-public enum TruceRole {
+public enum AllianceRole {
     Leader,
     Officer,
     Member,
     NonMember;
 
-    public static TruceRole fromString(String role) {
+    public static AllianceRole fromString(String role) {
         switch (role) {
             case "Leader":
                 return Leader;

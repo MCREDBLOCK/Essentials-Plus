@@ -1,4 +1,4 @@
-package me.invisibledrax.alliances.truces;
+package me.invisibledrax.alliances.alliances;
 
 import org.bukkit.ChatColor;
 import org.bukkit.event.EventHandler;
@@ -9,8 +9,8 @@ public class PlayerChatListener implements Listener {
 
     @EventHandler
     public void onMessageSend(AsyncPlayerChatEvent e) {
-        if (Truce.isInTruce(e.getPlayer())) {
-            e.setFormat(ChatColor.YELLOW + "" + ChatColor.BOLD + Truce.getTruce(e.getPlayer()).getName()
+        if (Alliance.isInAlliance(e.getPlayer())) {
+            e.setFormat(ChatColor.YELLOW + "" + ChatColor.BOLD + Alliance.getAlliance(e.getPlayer()).getName()
                     + " " + e.getPlayer().getDisplayName() + ChatColor.DARK_AQUA + ">> " + ChatColor.WHITE + e.getMessage());
         }
     }

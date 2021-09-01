@@ -1,4 +1,4 @@
-package me.invisibledrax.alliances.truces;
+package me.invisibledrax.alliances.alliances;
 
 import me.invisibledrax.alliances.Aplayer;
 import me.invisibledrax.alliances.Main;
@@ -17,11 +17,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.UUID;
 
-public class Truce {
+public class Alliance {
 
     private static Main pl = Main.getInstance();
-    private static HashMap<String, Truce> truceNames = new HashMap<>();
-    private static HashMap<Aplayer, Truce> playerTruces = new HashMap<>();
+    private static HashMap<String, Alliance> allianceNames = new HashMap<>();
+    private static HashMap<Aplayer, Alliance> playerAlliances = new HashMap<>();
     public static final int MAX_MEMBERS = 5;
     public static final String DEFAULT_DESCRIPTION = "Default :(";
 
@@ -31,12 +31,12 @@ public class Truce {
     private String desc;
     private ArrayList<UUID> members = new ArrayList<>();
 
-    private Truce(String name, OfflinePlayer leader) {
+    private Alliance(String name, OfflinePlayer leader) {
         this.name = name;
         this.leader = leader;
     }
 
-    private Truce(File loadedFile) {
+    private Alliance(File loadedFile) {
         f = loadedFile;
         YamlConfiguration config = new YamlConfiguration();
         try {
@@ -57,62 +57,62 @@ public class Truce {
         this.members = members;
     }
 
-    public static Truce createTruce(String name, Player owner) {
-        Truce truce = new Truce(name, owner);
-        truceNames.put(name, truce);
-        playerTruces.put(Aplayer.getAplayer(owner), truce);
+    public static Alliance createAlliance(String name, Player owner) {
+        Alliance alliance = new Alliance(name, owner);
+        allianceNames.put(name, alliance);
+        playerAlliances.put(Aplayer.getAplayer(owner), alliance);
 
-        truce.getConfigFile().getParentFile().mkdirs();
+        alliance.getConfigFile().getParentFile().mkdirs();
         try {
-            truce.getConfigFile().createNewFile();
+            alliance.getConfigFile().createNewFile();
         } catch (IOException e) {
             // Don't print stack trace
         }
-        truce.members = new ArrayList<>();
-        truce.setName(name);
-        truce.setDescription(DEFAULT_DESCRIPTION);
-        truce.addMember(owner);
-        truce.setRole(owner, TruceRole.Leader);
-        return truce;
+        alliance.members = new ArrayList<>();
+        alliance.setName(name);
+        alliance.setDescription(DEFAULT_DESCRIPTION);
+        alliance.addMember(owner);
+        alliance.setRole(owner, AllianceRole.Leader);
+        return alliance;
     }
 
-    public void disbandTruce() {
-        truceNames.remove(name);
+    public void disbandAlliance() {
+        allianceNames.remove(name);
         for(OfflinePlayer off : getMembers()) {
-            playerTruces.remove(Aplayer.getAplayer(off));
+            playerAlliances.remove(Aplayer.getAplayer(off));
         }
         getConfigFile().delete();
     }
 
-    public static Truce loadTruce(File f) {
-        Truce truce = new Truce(f);
-        truceNames.put(truce.getName(), truce);
-        return truce;
+    public static Alliance loadAlliance(File f) {
+        Alliance alliance = new Alliance(f);
+        allianceNames.put(alliance.getName(), alliance);
+        return alliance;
     }
 
-    public static ArrayList<Truce> getAllTruces() {
-        ArrayList<Truce> ar = new ArrayList<>();
-        ar.addAll(truceNames.values());
+    public static ArrayList<Alliance> getAllAlliances() {
+        ArrayList<Alliance> ar = new ArrayList<>();
+        ar.addAll(allianceNames.values());
         return ar;
     }
 
-    public static Truce getTruce(String name) {
-        return truceNames.get(name);
+    public static Alliance getAlliance(String name) {
+        return allianceNames.get(name);
     }
 
-    public static Truce getTruce(OfflinePlayer p) {
-        return playerTruces.get(Aplayer.getAplayer(p));
+    public static Alliance getAlliance(OfflinePlayer p) {
+        return playerAlliances.get(Aplayer.getAplayer(p));
     }
 
     public static boolean exists(String name) {
-        if (truceNames.containsKey(name)) {
+        if (allianceNames.containsKey(name)) {
             return true;
         }
         return false;
     }
 
-    public static boolean isInTruce(OfflinePlayer player) {
-        if (playerTruces.containsKey(Aplayer.getAplayer(player))) {
+    public static boolean isInAlliance(OfflinePlayer player) {
+        if (playerAlliances.containsKey(Aplayer.getAplayer(player))) {
             return true;
         }
         else {
@@ -120,16 +120,16 @@ public class Truce {
         }
     }
 
-    public static void registerTruces() {
+    public static void registerAlliances() {
         if (!getConfigPath().exists()) {
             getConfigPath().mkdirs();
         }
         for (File f: getConfigPath().listFiles()) {
-            Truce truce = loadTruce(f);
-            for (OfflinePlayer op : truce.getMembers()) {
-                playerTruces.put(Aplayer.getAplayer(op), truce);
-                truceNames.put(truce.getName(), truce);
-                YamlConfiguration config = truce.getConfig();
+            Alliance alliance = loadAlliance(f);
+            for (OfflinePlayer op : alliance.getMembers()) {
+                playerAlliances.put(Aplayer.getAplayer(op), alliance);
+                allianceNames.put(alliance.getName(), alliance);
+                YamlConfiguration config = alliance.getConfig();
                 config.set("Members." + op.getUniqueId() + ".Name", op.getName());
             }
         }
@@ -173,14 +173,14 @@ public class Truce {
 
     public void addMember(OfflinePlayer p) {
         members.add(p.getUniqueId());
-        playerTruces.put(Aplayer.getAplayer(p), this);
+        playerAlliances.put(Aplayer.getAplayer(p), this);
         YamlConfiguration config = getConfig();
         config.set("Members." + p.getUniqueId() + ".Name", p.getName());
-        config.set("Members." + p.getUniqueId() + ".Role", TruceRole.Member.toString());
+        config.set("Members." + p.getUniqueId() + ".Role", AllianceRole.Member.toString());
         SaveReloadConfig.saveAndReload(config, getConfigFile());
     }
 
-    public void setRole(OfflinePlayer p, TruceRole role) {
+    public void setRole(OfflinePlayer p, AllianceRole role) {
         YamlConfiguration config = getConfig();
         config.set("Members." + p.getUniqueId() + ".Role", role.toString());
         SaveReloadConfig.saveAndReload(config, getConfigFile());
@@ -188,7 +188,7 @@ public class Truce {
 
     public void removeMember(OfflinePlayer p) {
         members.remove(p.getUniqueId());
-        playerTruces.remove(Aplayer.getAplayer(p));
+        playerAlliances.remove(Aplayer.getAplayer(p));
         YamlConfiguration config = getConfig();
         config.set("Members." + p.getUniqueId(), null);
         SaveReloadConfig.saveAndReload(config, getConfigFile());
@@ -202,7 +202,7 @@ public class Truce {
     }
 
     public void setName(String name) {
-        truceNames.put(name, this);
+        allianceNames.put(name, this);
         this.name = name;
         YamlConfiguration config = getConfig();
         config.set("Name", name);
@@ -210,23 +210,23 @@ public class Truce {
     }
 
     public void changeName(String name) {
-        Truce truce = new Truce(name, leader);
-        truce.setName(name);
-        truce.setDescription(getDescription());
+        Alliance alliance = new Alliance(name, leader);
+        alliance.setName(name);
+        alliance.setDescription(getDescription());
         for (OfflinePlayer member : getMembers()) {
-            truce.addMember(member);
-            truce.setRole(member, getRole(member));
-            playerTruces.put(Aplayer.getAplayer(member), truce);
+            alliance.addMember(member);
+            alliance.setRole(member, getRole(member));
+            playerAlliances.put(Aplayer.getAplayer(member), alliance);
         }
-        truceNames.remove(getName());
-        truceNames.put(name, truce);
+        allianceNames.remove(getName());
+        allianceNames.put(name, alliance);
         getConfigFile().delete();
-        truce.getConfigFile();
+        alliance.getConfigFile();
         getConfigFile().delete();
     }
 
-    public TruceRole getRole(OfflinePlayer p) {
-        return TruceRole.fromString(getConfig().getString("Members." + p.getUniqueId() + ".Role"));
+    public AllianceRole getRole(OfflinePlayer p) {
+        return AllianceRole.fromString(getConfig().getString("Members." + p.getUniqueId() + ".Role"));
     }
 
     public File getConfigFile() {

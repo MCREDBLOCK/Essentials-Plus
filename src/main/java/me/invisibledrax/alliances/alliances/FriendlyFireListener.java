@@ -1,4 +1,4 @@
-package me.invisibledrax.alliances.truces;
+package me.invisibledrax.alliances.alliances;
 
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -13,7 +13,7 @@ public class FriendlyFireListener implements Listener {
         if ((e.getEntity() instanceof Player) && (e.getDamager() instanceof Player)) {
             Player hurt = (Player) e.getEntity();
             Player damager = (Player) e.getDamager();
-            if (Truce.getTruce(damager).equals(Truce.getTruce(hurt))) {
+            if (Alliance.getAlliance(damager).equals(Alliance.getAlliance(hurt))) {
                 damager.sendMessage(ChatColor.RED + "(!) You cannot hurt members of your truce!");
                 e.setCancelled(true);
             }

@@ -1,6 +1,6 @@
 package me.invisibledrax.alliances;
 
-import me.invisibledrax.alliances.truces.Truce;
+import me.invisibledrax.alliances.alliances.Alliance;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -18,7 +18,7 @@ public class Aplayer {
 	private OfflinePlayer player;
 	private boolean pvping;
 	private int pvpCooldown = 0;
-	private ArrayList<Truce> truceInvites = new ArrayList<>();
+	private ArrayList<Alliance> allianceInvites = new ArrayList<>();
 	
 	private Aplayer(OfflinePlayer player) {
 		this.player = player;
@@ -64,39 +64,39 @@ public class Aplayer {
 		}.runTaskTimer(pl, 0, 20);
 	}
 
-	public Truce getTruce() {
-		return Truce.getTruce(player);
+	public Alliance getTruce() {
+		return Alliance.getAlliance(player);
 	}
 
-	public ArrayList<Truce> getTruceInvites() {
-		return truceInvites;
+	public ArrayList<Alliance> getTruceInvites() {
+		return allianceInvites;
 	}
 
 	public ArrayList<BukkitTask> inviteRunnables = new ArrayList<>();
 
-	public void addTruceInvite(Truce truce) {
-		truceInvites.add(truce);
+	public void addTruceInvite(Alliance alliance) {
+		allianceInvites.add(alliance);
 		if (player.isOnline()) {
-			Bukkit.getPlayer(player.getUniqueId()).sendMessage(ChatColor.YELLOW + "You have been invited to the " + truce.getName() + " truce!");
+			Bukkit.getPlayer(player.getUniqueId()).sendMessage(ChatColor.YELLOW + "You have been invited to the " + alliance.getName() + " truce!");
 		}
 		BukkitTask run = new BukkitRunnable() {
 			@Override
 			public void run() {
-				truceInvites.remove(truce);
+				allianceInvites.remove(alliance);
 				if (player.isOnline()) {
-					Bukkit.getPlayer(player.getUniqueId()).sendMessage(ChatColor.YELLOW + "Your invite from the " + truce.getName() + " truce has expired!");
+					Bukkit.getPlayer(player.getUniqueId()).sendMessage(ChatColor.YELLOW + "Your invite from the " + alliance.getName() + " truce has expired!");
 				}
 			}
 		}.runTaskLater(pl, 20 * 120);
 		inviteRunnables.add(run);
 	}
 
-	public void removeTruceInvite(Truce truce) {
-		truceInvites.remove(truce);
+	public void removeTruceInvite(Alliance alliance) {
+		allianceInvites.remove(alliance);
 	}
 
-	public boolean hasTruceInvite(Truce truce) {
-		if (truceInvites.contains(truce)) {
+	public boolean hasTruceInvite(Alliance alliance) {
+		if (allianceInvites.contains(alliance)) {
 			return true;
 		}
 		return false;

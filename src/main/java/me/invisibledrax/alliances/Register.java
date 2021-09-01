@@ -1,9 +1,9 @@
 package me.invisibledrax.alliances;
 
-import me.invisibledrax.alliances.truces.FriendlyFireListener;
-import me.invisibledrax.alliances.truces.PlayerChatListener;
-import me.invisibledrax.alliances.truces.Truce;
-import me.invisibledrax.alliances.truces.TruceCommand;
+import me.invisibledrax.alliances.alliances.FriendlyFireListener;
+import me.invisibledrax.alliances.alliances.PlayerChatListener;
+import me.invisibledrax.alliances.alliances.Alliance;
+import me.invisibledrax.alliances.alliances.AllianceCommand;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 
@@ -19,11 +19,12 @@ public class Register {
 
     public static void registerCommands() {
         // Register commands
-        pl.getCommand("truce").setExecutor(new TruceCommand());
+        pl.getCommand("alliance").setExecutor(new AllianceCommand());
+        pl.getCommand("alliance").setName(Main.commandName);
     }
 
     public static void registerMisc() {
-        Truce.registerTruces();
+        Alliance.registerAlliances();
     }
 
 }
